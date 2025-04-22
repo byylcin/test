@@ -50,8 +50,15 @@ const nextButton = document.getElementById('next-btn');
 const scoreElement = document.getElementById('score');
 const progressElement = document.getElementById('progress');
 
+// Sayfa yüklendiğinde quiz'i başlat
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM yüklendi, quiz başlatılıyor"); // Konsol kontrolü
+    startQuiz();
+});
+
 // Quiz'i başlat
 function startQuiz() {
+    console.log("startQuiz fonksiyonu çalıştı"); // Konsol kontrolü
     currentQuestionIndex = 0;
     score = 0;
     updateScore();
