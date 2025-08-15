@@ -1,26 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proje Yönetimi Quizzz Uygulaması</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fotoğraflarınızı Çiftle Paylaşın 💍📸</title>
+  <style>
+    :root { --bg:#f7f7fb; --card:#ffffff; --fg:#111; --muted:#666; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--fg); }
+    .wrap { max-width: 560px; margin: 24px auto; padding: 16px; }
+    .card { background:var(--card); border-radius:16px; box-shadow:0 6px 24px rgba(0,0,0,.08); padding:20px; }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    label { display:block; font-weight:600; margin:14px 0 8px; }
+    input[type=text], textarea { width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:16px; }
+    input[type=file]{ width:100%; }
+    button { margin-top:14px; width:100%; padding:14px; font-size:16px; font-weight:700; border:0; border-radius:12px; cursor:pointer; background:#111; color:#fff; }
+    .status { margin-top:12px; font-size:14px; }
+    .ok { color: #0a7f2e; }
+    .err { color: #b00020; }
+    .hint { font-size:12px; color: var(--muted); margin-top:6px; }
+    footer{ text-align:center; font-size:12px; color:#888; margin-top:16px; }
+  </style>
 </head>
 <body>
-    <div class="quiz-container">
-        <h1>Proje Yönetimi Quiz</h1>
-        <div class="score-container">
-            <span id="score">Puan: 0</span>
-        </div>
-        <div id="question-container" class="question-container">
-            <div id="question" class="question">Quiz yükleniyor...</div>
-            <div id="options" class="options"></div>
-        </div>
-        <div id="result" class="result"></div>
-        <div id="explanation" class="explanation"></div>
-        <button id="next-btn" class="next-btn" style="display:none;">Sonraki Soru</button>
-        <div id="progress" class="progress"></div>
+  <div class="wrap">
+    <div class="card">
+      <h1>Fotoğraflarınızı bizimle paylaşın 💍</h1>
+      <p>QR’ı okutarak geldiniz. Telefonunuzdan düğün fotoğraflarınızı yükleyin; yalnızca çift görebilir.</p>
+
+      <form id="uploader">
+        <label for="name">İsminiz (opsiyonel)</label>
+        <input type="text" id="name" name="name" placeholder="Örn: Ayşe & Ali" />
+
+        <label for="message">Çifte kısa bir not (opsiyonel)</label>
+        <textarea id="message" name="message" rows="3" placeholder="Mutluluklar!" ></textarea>
+
+        <label for="files">Fotoğraf(lar)</label>
+        <input type="file" id="files" name="files" accept="image/*" multiple required />
+        <div class="hint">Sadece fotoğraf seçin. En fazla 10–15 adet önerilir.</div>
+
+        <button type="submit">Yükle</button>
+        <div id="status" class="status"></div>
+      </form>
     </div>
-    <script src="script.js"></script>
+    <footer>Gizlilik: Dosyalar yalnızca çiftin Drive klasörüne kaydedilir ve paylaşılmaz.</footer>
+  </div>
+
+  <hr>
+  <button id="testBtn" type="button">Bağlantı Testi Yap</button>
+  <div id="testResult" style="margin-top:8px; font-size:14px; color:#555;"></div>
+
+  <script>
+    // 1) Apps Script Web App URL'inizi buraya yazın
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyXSW9X0hh5XLCExwTf8Ag1Adp87Umh04pdtAsOThIbfcpPH6NrS5llpRuurlGsVTxs9g/exec';
+
+    // Test butonu
+    document.getElementById('testBtn').addEventListener('click', async () => {
+      const resultEl = document.getElementById('testResult');
+      resultEl.textContent = 'Test ediliyor...';
+      try {
+        const res = await fetch(SCRIPT_URL); // GET isteği
+        const text = await res.text();
+        resultEl.textContent = 'Yanıt: ' + text;
+      } catch (err) {
+        resultEl.textContent = 'Bağlantı hatası: ' + err.message;
+      }
+    });
+
+    // Form gönderimi
+    const form = document.getElementById('uploader');
+    const statusEl = document.getElementById('status');
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      statusEl.textContent = 'Yükleniyor, lütfen bekleyin…';
+      statusEl.className = 'status';
+
+      const files = document.getElementById('files').files;
+      if (!files || !files.length) {
+        statusEl.textContent = 'Lütfen en az bir fotoğraf seçin.';
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append('name', document.getElementById('name').value || '');
+      fd.append('message', document.getElementById('message').value || '');
+
+      const MAX_FILES = 20;
+      const count = Math.min(files.length, MAX_FILES);
+      for (let i = 0; i < count; i++) {
+        fd.append('file' + i, files[i], files[i].name);
+      }
+
+      try {
+        const res = await fetch(SCRIPT_URL, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.ok) {
+          statusEl.textContent = `Teşekkürler! ${data.files.length} fotoğraf yüklendi.`;
+          statusEl.className = 'status ok';
+          form.reset();
+        } else {
+          statusEl.textContent = 'Hata: ' + (data.error || 'Bilinmeyen hata');
+          statusEl.className = 'status err';
+        }
+      } catch (err) {
+        statusEl.textContent = 'Bağlantı hatası: ' + err.message;
+        statusEl.className = 'status err';
+      }
+    });
+  </script>
 </body>
 </html>
